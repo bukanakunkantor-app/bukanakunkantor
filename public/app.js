@@ -86,49 +86,7 @@ if (locInputs.prov) {
     // Initialize provinces
     loadProvinces();
 }
-
-async function fetchNearbyRestos(provName, cityName, districtName) {
-    // 1. Nominatim
-    const query = `${districtName}, ${cityName}, ${provName}, Indonesia`;
-    const nomRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
-    const nomData = await nomRes.json();
-    if (!nomData || nomData.length === 0) return null;
-
-    const lat = nomData[0].lat;
-    const lon = nomData[0].lon;
-
-    // 2. Overpass
-    const overpassQuery = `
-        [out:json][timeout:15];
-        (
-          node["amenity"~"restaurant|cafe|food_court|fast_food"](around:10000,${lat},${lon});
-          way["amenity"~"restaurant|cafe|food_court|fast_food"](around:10000,${lat},${lon});
-          relation["amenity"~"restaurant|cafe|food_court|fast_food"](around:10000,${lat},${lon});
-        );
-        out center 30;
-    `;
-    const opRes = await fetch('https://overpass-api.de/api/interpreter', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: 'data=' + encodeURIComponent(overpassQuery)
-    });
-    const opData = await opRes.json();
-
-    if (!opData || !opData.elements || opData.elements.length === 0) return null;
-
-    // Filter elements with name
-    const validElements = opData.elements.filter(e => e.tags && e.tags.name);
-    validElements.sort(() => 0.5 - Math.random()); // Shuffle 
-
-    const restos = validElements.slice(0, 10).map((e, idx) => ({
-        id: 'r_osm_' + e.id,
-        name: e.tags.name,
-        price_range: 'Menyesuaikan',
-        menu_highlights: e.tags.cuisine || (e.tags.amenity === 'cafe' ? 'Cafe/Coffee' : 'Kuliner Lokal')
-    }));
-
-    return restos.length > 0 ? restos : null;
-}
+// fetchNearbyRestos moved to backend to avoid CORS/Headers blocking
 
 // Handlers
 document.getElementById('btn-create-room').addEventListener('click', async () => {
@@ -140,37 +98,29 @@ document.getElementById('btn-create-room').addEventListener('click', async () =>
     btn.disabled = true;
     const originalText = btn.innerText;
 
-    let restos = null;
-    let locationMessage = "";
+    let locationData = null;
     if (locInputs.prov) {
         const provOpt = locInputs.prov.options[locInputs.prov.selectedIndex];
         const cityOpt = locInputs.city.options[locInputs.city.selectedIndex];
         const distOpt = locInputs.district.options[locInputs.district.selectedIndex];
 
         if (distOpt && distOpt.value) {
-            btn.innerText = 'Mencari Tempat (10KM)...';
-            try {
-                restos = await fetchNearbyRestos(provOpt.dataset.name, cityOpt.dataset.name, distOpt.dataset.name);
-                if (!restos) {
-                    locationMessage = " (Area tidak terbaca di Maps, pakai resto default)";
-                } else {
-                    locationMessage = ` (Menemukan ${restos.length} Resto disekitar ${distOpt.dataset.name})`;
-                }
-            } catch (e) {
-                console.error("OSM Fetch failed", e);
-                locationMessage = " (Gagal memuat peta)";
-            }
+            btn.innerText = 'Server Sedang Mencari Tempat (10KM)...';
+            locationData = {
+                prov: provOpt.dataset.name,
+                city: cityOpt.dataset.name,
+                district: distOpt.dataset.name
+            };
         }
     }
 
-    btn.innerText = originalText;
-    btn.disabled = false;
+    // Delay slight UI feedback
+    setTimeout(() => {
+        btn.innerText = originalText;
+        btn.disabled = false;
+    }, 1500);
 
-    if (locationMessage) {
-        showError("Daftar Resto" + locationMessage); // reusing error toast to display info
-    }
-
-    socket.emit('create_room', { name, groupName, restaurants: restos });
+    socket.emit('create_room', { name, groupName, restaurants: null, locationData });
 });
 
 document.getElementById('btn-join-room').addEventListener('click', () => {
@@ -210,6 +160,7 @@ socket.on('login_success', (data) => {
 
 socket.on('state_update', (state) => {
     console.log('State updated:', state);
+    console.log('Current state restos:', state.restaurants);
     if (!currentUser) return; // Wait until logged in
 
     // Update Participants in Lobby
@@ -397,12 +348,20 @@ function renderRound3(restaurants) {
         const box = document.createElement('div');
         box.className = 'option-box resto-card animate-slide-up';
         box.style.animationDelay = `${i * 0.05}s`;
+
+        let mapLink = '';
+        if (resto.lat && resto.lon) {
+            mapLink = `<a href="https://www.google.com/maps/search/?api=1&query=${resto.lat},${resto.lon}" target="_blank" style="color:var(--primary-green); font-size: 0.8rem; text-decoration: none; font-weight: bold; padding-top: 5px; display: inline-block;">📍 Buka di Maps</a>`;
+        }
+
         box.innerHTML = `
             <h4>${escapeHTML(resto.name)}</h4>
             <div class="highlight-badge">${escapeHTML(resto.price_range)}</div>
-            <p style="font-size: 0.85rem; color: #ccc; margin:0;">${escapeHTML(resto.menu_highlights)}</p>
+            <p style="font-size: 0.85rem; color: #888; margin:0;">${escapeHTML(resto.menu_highlights)}</p>
+            ${mapLink}
         `;
-        box.onclick = () => {
+        box.onclick = (e) => {
+            if (e.target.tagName === 'A') return; // Don't trigger vote when clicking map link
             if (box.classList.contains('voted-disabled')) return;
             if (selectedRestosR3.includes(resto.id)) {
                 selectedRestosR3 = selectedRestosR3.filter(id => id !== resto.id);
@@ -444,12 +403,20 @@ function renderRound4(state) {
         const box = document.createElement('div');
         box.className = 'option-box resto-card animate-slide-up';
         box.style.animationDelay = `${i * 0.05}s`;
+
+        let mapLink = '';
+        if (resto.lat && resto.lon) {
+            mapLink = `<a href="https://www.google.com/maps/search/?api=1&query=${resto.lat},${resto.lon}" target="_blank" style="color:var(--primary-green); font-size: 0.8rem; text-decoration: none; font-weight: bold; padding-top: 5px; display: inline-block;">📍 Buka di Maps</a>`;
+        }
+
         box.innerHTML = `
             <h4>${escapeHTML(resto.name)}</h4>
             <div class="highlight-badge">${escapeHTML(resto.price_range)}</div>
-            <p style="font-size: 0.85rem; color: #ccc; margin:0;">${escapeHTML(resto.menu_highlights)}</p>
+            <p style="font-size: 0.85rem; color: #888; margin:0;">${escapeHTML(resto.menu_highlights)}</p>
+            ${mapLink}
         `;
-        box.onclick = () => {
+        box.onclick = (e) => {
+            if (e.target.tagName === 'A') return;
             if (box.classList.contains('voted-disabled')) return;
             document.querySelectorAll('#round4-options .option-box').forEach(b => b.classList.remove('selected'));
             box.classList.add('selected');

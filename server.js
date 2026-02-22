@@ -51,17 +51,100 @@ function getPublicState(roomId) {
     };
 }
 
+async function fetchNearbyRestos(provName, cityName, districtName) {
+    try {
+        const query = `${districtName}, ${cityName}, ${provName}, Indonesia`;
+        const nomRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`, {
+            headers: {
+                'Accept-Language': 'id',
+                'User-Agent': 'BukberChampionshipServer/1.0'
+            }
+        });
+
+        if (!nomRes.ok) return null;
+
+        const nomData = await nomRes.json();
+        if (!nomData || nomData.length === 0) return null;
+
+        const lat = nomData[0].lat;
+        const lon = nomData[0].lon;
+
+        const overpassQuery = `
+            [out:json][timeout:15];
+            (
+              node["amenity"~"restaurant|cafe|food_court|fast_food"](around:10000,${lat},${lon});
+              way["amenity"~"restaurant|cafe|food_court|fast_food"](around:10000,${lat},${lon});
+              relation["amenity"~"restaurant|cafe|food_court|fast_food"](around:10000,${lat},${lon});
+            );
+            out center 30;
+        `;
+        const opRes = await fetch('https://overpass-api.de/api/interpreter', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'User-Agent': 'BukberChampionshipServer/1.0'
+            },
+            body: 'data=' + encodeURIComponent(overpassQuery)
+        });
+        if (!opRes.ok) {
+            console.error("Overpass API error", opRes.status, await opRes.text());
+            return null;
+        }
+
+        const opText = await opRes.text();
+        let opData = null;
+        try {
+            opData = JSON.parse(opText);
+        } catch (e) {
+            console.error("Overpass Parsing Error. Raw response:", opText.substring(0, 100));
+            return null;
+        }
+        if (!opData || !opData.elements || opData.elements.length === 0) return null;
+
+        const validElements = opData.elements.filter(e => e.tags && e.tags.name);
+        validElements.sort(() => 0.5 - Math.random());
+
+        const restos = validElements.slice(0, 10).map((e) => ({
+            id: 'r_osm_' + e.id,
+            name: e.tags.name,
+            lat: e.lat || e.center?.lat || lat,
+            lon: e.lon || e.center?.lon || lon,
+            price_range: '10KM Radius',
+            menu_highlights: e.tags.cuisine || (e.tags.amenity === 'cafe' ? 'Cafe/Coffee' : 'Kuliner Lokal')
+        }));
+
+        return restos.length > 0 ? restos : null;
+    } catch (err) {
+        console.error("OSM Fetch Error from Backend", err);
+        return null;
+    }
+}
+
 io.on('connection', (socket) => {
     console.log('User connected:', socket.id);
 
-    socket.on('create_room', (data) => {
-        const { name, groupName, restaurants } = data;
+    socket.on('create_room', async (data) => {
+        const { name, groupName, restaurants, locationData } = data;
         const roomId = Math.floor(1000 + Math.random() * 9000).toString(); // 4-digit random
 
         rooms[roomId] = createDefaultRoomState(groupName || 'Bukber Championship');
-        if (restaurants && Array.isArray(restaurants) && restaurants.length > 0) {
-            rooms[roomId].restaurants = restaurants;
+
+        let finalRestos = restaurants || [];
+        if (locationData) {
+            console.log("Fetching location from server:", locationData);
+            const fetched = await fetchNearbyRestos(locationData.prov, locationData.city, locationData.district);
+            if (fetched) {
+                finalRestos = fetched;
+                socket.emit('error', `Menemukan ${fetched.length} Restoran!`);
+            } else {
+                socket.emit('error', 'Gagal memuat peta OSM, menggunakan restoran cadangan.');
+            }
         }
+
+        if (finalRestos && Array.isArray(finalRestos) && finalRestos.length > 0) {
+            rooms[roomId].restaurants = finalRestos;
+        }
+
         rooms[roomId].users[socket.id] = { id: socket.id, name, isHost: true };
 
         socket.join(roomId);
