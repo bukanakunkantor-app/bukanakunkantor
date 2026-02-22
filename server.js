@@ -55,10 +55,13 @@ io.on('connection', (socket) => {
     console.log('User connected:', socket.id);
 
     socket.on('create_room', (data) => {
-        const { name, groupName } = data;
+        const { name, groupName, restaurants } = data;
         const roomId = Math.floor(1000 + Math.random() * 9000).toString(); // 4-digit random
 
         rooms[roomId] = createDefaultRoomState(groupName || 'Bukber Championship');
+        if (restaurants && Array.isArray(restaurants) && restaurants.length > 0) {
+            rooms[roomId].restaurants = restaurants;
+        }
         rooms[roomId].users[socket.id] = { id: socket.id, name, isHost: true };
 
         socket.join(roomId);
