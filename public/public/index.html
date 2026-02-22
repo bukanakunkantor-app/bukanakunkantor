@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Bukber Championship</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div id="app">
+        <main id="main-content">
+
+            <!-- ENTRY SECTION -->
+            <section id="section-entry" class="active-section">
+                <!-- Ramadan Ornaments (Lanterns) -->
+                <div
+                    style="position: absolute; top: 1rem; left: 1.5rem; color: var(--accent-gold); font-size: 2rem; opacity: 0.8; animation: pulseGlow 4s infinite alternate;">
+                    🎐</div>
+                <div
+                    style="position: absolute; top: 1rem; right: 1.5rem; color: var(--accent-gold); font-size: 2.5rem; opacity: 0.7; animation: pulseGlow 5s infinite alternate-reverse;">
+                    🏮</div>
+
+                <div class="header-logo">
+                    <span class="icon-moon">🕌</span>
+                    <h1>Bukber Championship</h1>
+                </div>
+
+                <div class="card">
+                    <div class="input-group">
+                        <label for="name">Your Name</label>
+                        <input type="text" id="name" required placeholder="Enter name" autocomplete="off" />
+                    </div>
+
+                    <div class="input-group">
+                        <label for="group-name">Nama Grup Nongki</label>
+                        <input type="text" id="group-name" placeholder="e.g. Bukber Alumni 2026" autocomplete="off" />
+                    </div>
+
+                    <button id="btn-create-room" class="btn-primary">Create Room (Host)</button>
+
+                    <div class="divider"><span>OR</span></div>
+
+                    <div class="input-group">
+                        <label for="room-id-input">Room ID</label>
+                        <input type="text" id="room-id-input" placeholder="e.g. 1234" autocomplete="off" />
+                    </div>
+                    <button id="btn-join-room" class="btn-secondary">Join Room</button>
+
+                    <div id="error-msg" class="error-text hidden"></div>
+                </div>
+            </section>
+
+            <!-- LOBBY SECTION (Waiting Room) -->
+            <section id="section-lobby" class="hidden text-center">
+                <div class="header-logo">
+                    <span class="icon-moon">🌙</span>
+                    <h1>Bukber Championship</h1>
+                </div>
+
+                <p class="status-text">Waiting for host to start...</p>
+
+                <div class="room-pill" onclick="copyRoomId()">
+                    Room: <span id="display-room-id" class="highlight-text"></span>
+                    <span class="icon-copy">📋</span>
+                </div>
+                <div id="copy-toast" class="toast hidden">Copied to clipboard!</div>
+
+                <div class="participants-container">
+                    <div class="participants-header">
+                        <span class="icon-users">👥</span> <span id="users-count">0</span> joined
+                    </div>
+                    <ul id="participants-list" class="styled-list">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+
+                <p id="host-hint" class="hint-text hidden">Need at least 2 participants to start</p>
+
+                <div id="host-controls-lobby" class="hidden mt-4"
+                    style="display: flex; flex-direction: column; gap: 0.5rem;">
+                    <button class="btn-secondary"
+                        onclick="document.getElementById('admin-resto-modal').classList.remove('hidden')">Atur
+                        Restoran</button>
+                    <button id="btn-start-round1" class="btn-primary"
+                        onclick="socket.emit('admin_action', {roomId: currentRoomId, action: 'start_round1'})">Start
+                        Championship</button>
+                </div>
+            </section>
+
+            <!-- ROUND 1: Date Selection -->
+            <section id="section-round1" class="hidden">
+                <div class="header-compact">
+                    <h2>Round 1: Pilih Tanggal</h2>
+                    <div id="timer-display-r1" class="timer-sm hidden">10:00</div>
+                </div>
+                <p class="subtitle">Pilih tanggal yang menurutmu cocok</p>
+                <div id="round1-options" class="options-list"></div>
+                <button id="btn-submit-round1" class="btn-primary fixed-bottom" disabled>Submit Votes</button>
+            </section>
+
+            <!-- ROUND 2: Final Date -->
+            <section id="section-round2" class="hidden">
+                <div class="header-compact">
+                    <h2>Round 2: The Final Two</h2>
+                    <div id="timer-display-r2" class="timer-sm hidden">10:00</div>
+                </div>
+                <p class="subtitle">Pilih tanggal yang paling pas</p>
+                <div id="round2-options" class="options-list"></div>
+                <button id="btn-submit-round2" class="btn-primary fixed-bottom" disabled>Submit Vote</button>
+            </section>
+
+            <!-- ROUND 3: Restaurant -->
+            <section id="section-round3" class="hidden">
+                <div class="header-compact">
+                    <h2>Round 3: The Restaurant</h2>
+                    <div id="timer-display-r3" class="timer-sm hidden">10:00</div>
+                </div>
+                <p class="subtitle">Pilih 3 tempat yang paling cocok</p>
+                <div id="round3-options" class="options-list"></div>
+                <button id="btn-submit-round3" class="btn-primary fixed-bottom" disabled>Submit Votes</button>
+            </section>
+
+            <!-- ROUND 4: Final Resto -->
+            <section id="section-round4" class="hidden">
+                <div class="header-compact">
+                    <h2>Round 4: The Final Resto</h2>
+                    <div id="timer-display-r4" class="timer-sm hidden">10:00</div>
+                </div>
+                <p class="subtitle">Pilih 1 tempat yang paling pas</p>
+                <div id="round4-options" class="options-list"></div>
+                <button id="btn-submit-round4" class="btn-primary fixed-bottom" disabled>Submit Vote</button>
+            </section>
+
+            <!-- RESULTS -->
+            <section id="section-results" class="hidden">
+                <div class="header-compact text-center"
+                    style="display: flex; justify-content: center; align-items: center; gap: 0.5rem;">
+                    <h2>🏆 Bukber Champions 🏆</h2>
+                </div>
+                <p id="results-group-name" class="subtitle text-center"
+                    style="font-weight: bold; color: var(--text-main);">-</p>
+
+                <div id="results-container" class="card mt-4 text-center"></div>
+
+                <div class="text-center mt-4">
+                    <button class="btn-primary" onclick="downloadResultAsImage()">Download Hasil</button>
+                </div>
+
+                <div id="host-controls-results" class="hidden mt-4">
+                    <button class="btn-secondary"
+                        onclick="socket.emit('admin_action', {roomId: currentRoomId, action: 'reset'})">Bikin lagi /
+                        Reset</button>
+                </div>
+            </section>
+        </main>
+
+        <!-- Fixed Admin Controls for Host during active rounds -->
+        <div id="host-controls-active" class="host-panel hidden">
+            <button class="btn-sm" style="background:var(--primary-green); color:#000; border:none;"
+                onclick="document.getElementById('admin-progress-modal').classList.remove('hidden')">View
+                Progress</button>
+            <button class="btn-sm btn-outline" id="btn-force-r2"
+                onclick="socket.emit('admin_action', {roomId: currentRoomId, action: 'start_round2'})">Force R2</button>
+            <button class="btn-sm btn-outline" id="btn-force-r3"
+                onclick="socket.emit('admin_action', {roomId: currentRoomId, action: 'start_round3'})">Force R3</button>
+            <button class="btn-sm btn-outline" id="btn-force-results"
+                onclick="socket.emit('admin_action', {roomId: currentRoomId, action: 'show_results'})">End & Show
+                Results</button>
+        </div>
+
+        <!-- Admin Progress Modal -->
+        <div id="admin-progress-modal" class="modal hidden">
+            <div class="modal-content card">
+                <div class="header-compact">
+                    <h3 style="color: var(--primary-green); margin:0;">Voting Progress</h3>
+                    <button class="btn-sm btn-outline" style="border:none; font-size: 1.2rem; padding: 0 0.5rem;"
+                        onclick="document.getElementById('admin-progress-modal').classList.add('hidden')">✕</button>
+                </div>
+                <ul id="admin-progress-list" class="styled-list mt-4" style="max-height: 50vh; overflow-y: auto;">
+                    <!-- Populated by JS -->
+                </ul>
+            </div>
+        </div>
+
+        <!-- Admin Resto Modal -->
+        <div id="admin-resto-modal" class="modal hidden">
+            <div class="modal-content card" style="max-height: 80vh; display: flex; flex-direction: column;">
+                <div class="header-compact">
+                    <h3 style="color: var(--primary-green); margin:0;">Atur Restoran</h3>
+                    <button class="btn-sm btn-outline"
+                        style="border:none; font-size: 1.2rem; padding: 0 0.5rem; color: var(--text-main)"
+                        onclick="document.getElementById('admin-resto-modal').classList.add('hidden')">✕</button>
+                </div>
+
+                <!-- Add New Resto Form -->
+                <div class="mt-4"
+                    style="background: var(--bg-color); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                    <h4 style="margin-top:0; font-size:0.9rem; color: var(--accent-gold);">Tambah Resto Baru</h4>
+                    <input type="text" id="new-resto-name" placeholder="Nama Resto" class="resto-input" />
+                    <input type="text" id="new-resto-price" placeholder="Harga (ex: Rp 50 - 100rb)"
+                        class="resto-input" />
+                    <input type="text" id="new-resto-menu" placeholder="Highlight Menu" class="resto-input" />
+                    <button class="btn-primary" style="padding: 0.5rem; margin-top: 0.5rem;"
+                        onclick="addRestaurant()">Tambah</button>
+                </div>
+
+                <ul id="admin-resto-list" class="styled-list" style="overflow-y: auto; flex: 1; padding-bottom: 1rem;">
+                    <!-- Populated by JS -->
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Required for Image Download -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="app.js"></script>
+</body>
+
+</html>
