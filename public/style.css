@@ -52,8 +52,6 @@ body {
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
-    padding-bottom: 140px;
-    /* Space for fixed bottom buttons */
 }
 
 .hidden {
@@ -262,15 +260,9 @@ section {
 }
 
 .fixed-bottom {
-    position: fixed;
-    bottom: max(1.5rem, env(safe-area-inset-bottom));
-    left: 50%;
-    transform: translateX(-50%);
-    width: calc(100% - 3rem);
-    max-width: calc(480px - 3rem);
-    /* account for padding */
+    margin-top: 1.5rem;
+    width: 100%;
     box-sizing: border-box;
-    z-index: 999;
 }
 
 .divider {
@@ -577,4 +569,11 @@ section {
     100% {
         transform: rotate(360deg);
     }
+}
+
+/* Global utility to disable animations during html2canvas rendering */
+body.no-anim,
+body.no-anim * {
+    animation: none !important;
+    transition: none !important;
 }

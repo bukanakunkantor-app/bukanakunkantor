@@ -549,6 +549,9 @@ function downloadResultAsImage() {
     if (dlBtn) dlBtn.style.display = 'none';
     if (resetBtn) resetBtn.style.display = 'none';
 
+    // Apply global no-animation class to completely stop html2canvas cloned DOM re-triggering animations
+    document.body.classList.add('no-anim');
+
     html2canvas(resultsSec, {
         backgroundColor: '#F8F4E6', /* Light Theme Background */
         scale: 2 // High res
@@ -558,13 +561,15 @@ function downloadResultAsImage() {
         link.href = canvas.toDataURL('image/png');
         link.click();
 
-        // Restore buttons
+        // Restore buttons and animation
+        document.body.classList.remove('no-anim');
         if (dlBtn) dlBtn.style.display = 'inline-block';
         if (resetBtn) resetBtn.style.display = 'flex';
     }).catch(err => {
         console.error("Error generating image", err);
         showError("Failed to generate image.");
-        // Restore buttons
+        // Restore buttons and animation
+        document.body.classList.remove('no-anim');
         if (dlBtn) dlBtn.style.display = 'inline-block';
         if (resetBtn) resetBtn.style.display = 'flex';
     });
