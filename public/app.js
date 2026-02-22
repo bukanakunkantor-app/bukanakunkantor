@@ -37,12 +37,127 @@ const controls = {
     hostHint: document.getElementById('host-hint')
 };
 
+// Location Inputs
+const locInputs = {
+    prov: document.getElementById('sel-prov'),
+    city: document.getElementById('sel-city'),
+    district: document.getElementById('sel-district')
+};
+
+async function loadProvinces() {
+    try {
+        const res = await fetch('https://www.emsifa.com/api-wilayah-indonesia/api/provinces.json');
+        const data = await res.json();
+        if (locInputs.prov) {
+            locInputs.prov.innerHTML = '<option value="">Pilih Provinsi</option>' + data.map(p => `<option value="${p.id}" data-name="${p.name}">${p.name}</option>`).join('');
+        }
+    } catch (e) { console.error('Emsifa prov error', e); }
+}
+
+if (locInputs.prov) {
+    locInputs.prov.addEventListener('change', async (e) => {
+        locInputs.city.innerHTML = '<option value="">Pilih Kota/Kabupaten</option>';
+        locInputs.district.innerHTML = '<option value="">Pilih Kecamatan</option>';
+        locInputs.city.disabled = true;
+        locInputs.district.disabled = true;
+        if (!e.target.value) return;
+
+        try {
+            const res = await fetch(`https://www.emsifa.com/api-wilayah-indonesia/api/regencies/${e.target.value}.json`);
+            const data = await res.json();
+            locInputs.city.innerHTML = '<option value="">Pilih Kota/Kabupaten</option>' + data.map(p => `<option value="${p.id}" data-name="${p.name}">${p.name}</option>`).join('');
+            locInputs.city.disabled = false;
+        } catch (e) { console.error(e); }
+    });
+
+    locInputs.city.addEventListener('change', async (e) => {
+        locInputs.district.innerHTML = '<option value="">Pilih Kecamatan</option>';
+        locInputs.district.disabled = true;
+        if (!e.target.value) return;
+
+        try {
+            const res = await fetch(`https://www.emsifa.com/api-wilayah-indonesia/api/districts/${e.target.value}.json`);
+            const data = await res.json();
+            locInputs.district.innerHTML = '<option value="">Pilih Kecamatan</option>' + data.map(p => `<option value="${p.id}" data-name="${p.name}">${p.name}</option>`).join('');
+            locInputs.district.disabled = false;
+        } catch (e) { console.error(e); }
+    });
+
+    // Initialize provinces
+    loadProvinces();
+}
+
+async function fetchNearbyRestos(provName, cityName, districtName) {
+    // 1. Nominatim
+    const query = `${districtName}, ${cityName}, ${provName}, Indonesia`;
+    const nomRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
+    const nomData = await nomRes.json();
+    if (!nomData || nomData.length === 0) return null;
+
+    const lat = nomData[0].lat;
+    const lon = nomData[0].lon;
+
+    // 2. Overpass
+    const overpassQuery = `
+        [out:json][timeout:15];
+        (
+          node["amenity"~"restaurant|cafe|food_court"](around:10000,${lat},${lon});
+        );
+        out body 20;
+    `;
+    const opRes = await fetch('https://overpass-api.de/api/interpreter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'data=' + encodeURIComponent(overpassQuery)
+    });
+    const opData = await opRes.json();
+
+    if (!opData || !opData.elements || opData.elements.length === 0) return null;
+
+    // Filter elements with name
+    const validElements = opData.elements.filter(e => e.tags && e.tags.name);
+    validElements.sort(() => 0.5 - Math.random()); // Shuffle 
+
+    const restos = validElements.slice(0, 10).map((e, idx) => ({
+        id: 'r_osm_' + e.id,
+        name: e.tags.name,
+        price_range: 'Menyesuaikan',
+        menu_highlights: e.tags.cuisine || (e.tags.amenity === 'cafe' ? 'Cafe/Coffee' : 'Kuliner Lokal')
+    }));
+
+    return restos.length > 0 ? restos : null;
+}
+
 // Handlers
-document.getElementById('btn-create-room').addEventListener('click', () => {
+document.getElementById('btn-create-room').addEventListener('click', async () => {
     const name = inputs.name.value.trim();
     const groupName = inputs.groupName.value.trim();
     if (!name) return showError('Name is required');
-    socket.emit('create_room', { name, groupName });
+
+    const btn = document.getElementById('btn-create-room');
+    btn.disabled = true;
+    const originalText = btn.innerText;
+
+    let restos = null;
+    if (locInputs.prov) {
+        const provOpt = locInputs.prov.options[locInputs.prov.selectedIndex];
+        const cityOpt = locInputs.city.options[locInputs.city.selectedIndex];
+        const distOpt = locInputs.district.options[locInputs.district.selectedIndex];
+
+        if (distOpt && distOpt.value) {
+            btn.innerText = 'Mencari Tempat (10KM)...';
+            try {
+                restos = await fetchNearbyRestos(provOpt.dataset.name, cityOpt.dataset.name, distOpt.dataset.name);
+            } catch (e) {
+                console.error("OSM Fetch failed", e);
+            }
+        }
+    }
+
+    btn.innerText = originalText;
+    btn.disabled = false;
+
+    socket.emit('create_room', { name, groupName, restaurants: restos });
 });
 
 document.getElementById('btn-join-room').addEventListener('click', () => {

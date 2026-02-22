@@ -5,8 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Bukber Championship</title>
-    <link rel="stylesheet" href="style.css?v=1.1">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css?v=1.2">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;800&display=swap" rel="stylesheet">
 </head>
 
 <body>
@@ -37,6 +37,19 @@
                     <div class="input-group">
                         <label for="group-name">Nama Grup Nongki</label>
                         <input type="text" id="group-name" placeholder="e.g. Bukber Alumni 2026" autocomplete="off" />
+                    </div>
+
+                    <div class="input-group">
+                        <label>Lokasi Bukber (Untuk Rekomendasi 10KM)</label>
+                        <select id="sel-prov" class="resto-input">
+                            <option value="">Pilih Provinsi</option>
+                        </select>
+                        <select id="sel-city" class="resto-input" disabled>
+                            <option value="">Pilih Kota/Kabupaten</option>
+                        </select>
+                        <select id="sel-district" class="resto-input" disabled>
+                            <option value="">Pilih Kecamatan</option>
+                        </select>
                     </div>
 
                     <button id="btn-create-room" class="btn-primary">Create Room (Host)</button>
