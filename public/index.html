@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Bukber Championship</title>
-    <link rel="stylesheet" href="style.css?v=1.2">
+    <link rel="stylesheet" href="style.css?v=1.4">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;800&display=swap" rel="stylesheet">
 </head>
 
@@ -15,22 +15,17 @@
 
             <!-- ENTRY SECTION -->
             <section id="section-entry" class="active-section">
-                <!-- Ramadan Ornaments (Lanterns) -->
-                <div
-                    style="position: absolute; top: 1rem; left: 1.5rem; color: var(--accent-gold); font-size: 2rem; opacity: 0.8; animation: pulseGlow 4s infinite alternate;">
-                    🎐</div>
-                <div
-                    style="position: absolute; top: 1rem; right: 1.5rem; color: var(--accent-gold); font-size: 2.5rem; opacity: 0.7; animation: pulseGlow 5s infinite alternate-reverse;">
-                    🏮</div>
-
-                <div class="header-logo">
-                    <span class="icon-moon">🕌</span>
-                    <h1>Bukber Championship</h1>
+                <div class="header-logo-container">
+                    <div class="header-logo-mark">B</div>
+                    <div class="header-logo-text">
+                        <h1>Bukber</h1>
+                        <h2>Championship</h2>
+                    </div>
                 </div>
 
-                <div class="card">
+                <div class="card card-entry">
                     <div class="input-group">
-                        <label for="name">Your Name</label>
+                        <label for="name">Namamu</label>
                         <input type="text" id="name" required placeholder="Enter name" autocomplete="off" />
                     </div>
 
@@ -68,9 +63,12 @@
 
             <!-- LOBBY SECTION (Waiting Room) -->
             <section id="section-lobby" class="hidden text-center">
-                <div class="header-logo">
-                    <span class="icon-moon">🌙</span>
-                    <h1>Bukber Championship</h1>
+                <div class="header-logo-container">
+                    <div class="header-logo-mark">B</div>
+                    <div class="header-logo-text">
+                        <h1>Bukber</h1>
+                        <h2>Championship</h2>
+                    </div>
                 </div>
 
                 <p class="status-text">Waiting for host to start...</p>
@@ -149,9 +147,9 @@
 
             <!-- RESULTS -->
             <section id="section-results" class="hidden">
-                <div class="header-compact text-center"
-                    style="display: flex; justify-content: center; align-items: center; gap: 0.5rem;">
-                    <h2>🏆 Bukber Champions 🏆</h2>
+                <div class="results-header">
+                    <h2>Bukber Champions</h2>
+                    <div class="results-badge">Finalist</div>
                 </div>
                 <p id="results-group-name" class="subtitle text-center"
                     style="font-weight: bold; color: var(--text-main);">-</p>

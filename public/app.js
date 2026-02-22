@@ -101,9 +101,11 @@ async function fetchNearbyRestos(provName, cityName, districtName) {
     const overpassQuery = `
         [out:json][timeout:15];
         (
-          node["amenity"~"restaurant|cafe|food_court"](around:10000,${lat},${lon});
+          node["amenity"~"restaurant|cafe|food_court|fast_food"](around:10000,${lat},${lon});
+          way["amenity"~"restaurant|cafe|food_court|fast_food"](around:10000,${lat},${lon});
+          relation["amenity"~"restaurant|cafe|food_court|fast_food"](around:10000,${lat},${lon});
         );
-        out body 20;
+        out center 30;
     `;
     const opRes = await fetch('https://overpass-api.de/api/interpreter', {
         method: 'POST',
@@ -139,6 +141,7 @@ document.getElementById('btn-create-room').addEventListener('click', async () =>
     const originalText = btn.innerText;
 
     let restos = null;
+    let locationMessage = "";
     if (locInputs.prov) {
         const provOpt = locInputs.prov.options[locInputs.prov.selectedIndex];
         const cityOpt = locInputs.city.options[locInputs.city.selectedIndex];
@@ -148,14 +151,24 @@ document.getElementById('btn-create-room').addEventListener('click', async () =>
             btn.innerText = 'Mencari Tempat (10KM)...';
             try {
                 restos = await fetchNearbyRestos(provOpt.dataset.name, cityOpt.dataset.name, distOpt.dataset.name);
+                if (!restos) {
+                    locationMessage = " (Area tidak terbaca di Maps, pakai resto default)";
+                } else {
+                    locationMessage = ` (Menemukan ${restos.length} Resto disekitar ${distOpt.dataset.name})`;
+                }
             } catch (e) {
                 console.error("OSM Fetch failed", e);
+                locationMessage = " (Gagal memuat peta)";
             }
         }
     }
 
     btn.innerText = originalText;
     btn.disabled = false;
+
+    if (locationMessage) {
+        showError("Daftar Resto" + locationMessage); // reusing error toast to display info
+    }
 
     socket.emit('create_room', { name, groupName, restaurants: restos });
 });
