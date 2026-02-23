@@ -72,9 +72,9 @@ async function fetchNearbyRestos(provName, cityName, districtName) {
         const overpassQuery = `
             [out:json][timeout:15];
             (
-              node["amenity"~"restaurant|cafe|food_court|fast_food"](around:10000,${lat},${lon});
-              way["amenity"~"restaurant|cafe|food_court|fast_food"](around:10000,${lat},${lon});
-              relation["amenity"~"restaurant|cafe|food_court|fast_food"](around:10000,${lat},${lon});
+              node["amenity"="restaurant"](around:10000,${lat},${lon});
+              way["amenity"="restaurant"](around:10000,${lat},${lon});
+              relation["amenity"="restaurant"](around:10000,${lat},${lon});
             );
             out center 30;
         `;
@@ -110,7 +110,7 @@ async function fetchNearbyRestos(provName, cityName, districtName) {
             lat: e.lat || e.center?.lat || lat,
             lon: e.lon || e.center?.lon || lon,
             price_range: '10KM Radius',
-            menu_highlights: e.tags.cuisine || (e.tags.amenity === 'cafe' ? 'Cafe/Coffee' : 'Kuliner Lokal')
+            menu_highlights: e.tags.cuisine || 'Restoran'
         }));
 
         return restos.length > 0 ? restos : null;
@@ -208,7 +208,7 @@ io.on('connection', (socket) => {
     function handleAdminAction(roomId, action) {
         const room = rooms[roomId];
         if (!room) return;
-        const duration = 10 * 60 * 1000; // 10 minutes
+        const duration = 2 * 60 * 1000; // 2 minutes
 
         if (action === 'start_round1') {
             // Emit countdown event immediately

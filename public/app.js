@@ -97,6 +97,15 @@ function playBgMusic() {
     }
 }
 
+function playPopSound() {
+    const pop = document.getElementById('pop-sound');
+    if (pop) {
+        pop.currentTime = 0; // Reset to start
+        pop.volume = 0.5;
+        pop.play().catch(e => console.log('Audio play prevented', e));
+    }
+}
+
 // Handlers
 document.getElementById('btn-create-room').addEventListener('click', async () => {
     playBgMusic(); // Attempt to play music on interaction
@@ -320,6 +329,7 @@ function renderRound1() {
         box.innerHTML = `<h3>${formatDate(date)}</h3><p class="subtitle" style="margin:0;font-size:0.8rem;">Tap to select</p>`;
         box.onclick = () => {
             if (box.classList.contains('voted-disabled')) return;
+            playPopSound();
             if (selectedDatesR1.includes(date)) {
                 selectedDatesR1 = selectedDatesR1.filter(d => d !== date);
                 box.classList.remove('selected');
@@ -361,6 +371,7 @@ function renderRound2(topDates) {
         box.innerHTML = `<h3>${formatDate(date)}</h3><p class="subtitle" style="margin:0;font-size:0.8rem;">Tap to vote</p>`;
         box.onclick = () => {
             if (box.classList.contains('voted-disabled')) return;
+            playPopSound();
             document.querySelectorAll('#round2-options .option-box').forEach(b => b.classList.remove('selected'));
             box.classList.add('selected');
             selectedDateR2 = date;
@@ -410,6 +421,7 @@ function renderRound3(restaurants) {
         box.onclick = (e) => {
             if (e.target.tagName === 'A') return; // Don't trigger vote when clicking map link
             if (box.classList.contains('voted-disabled')) return;
+            playPopSound();
             if (selectedRestosR3.includes(resto.id)) {
                 selectedRestosR3 = selectedRestosR3.filter(id => id !== resto.id);
                 box.classList.remove('selected');
@@ -465,6 +477,7 @@ function renderRound4(state) {
         box.onclick = (e) => {
             if (e.target.tagName === 'A') return;
             if (box.classList.contains('voted-disabled')) return;
+            playPopSound();
             document.querySelectorAll('#round4-options .option-box').forEach(b => b.classList.remove('selected'));
             box.classList.add('selected');
             selectedRestoR4 = resto.id;
