@@ -88,8 +88,18 @@ if (locInputs.prov) {
 }
 // fetchNearbyRestos moved to backend to avoid CORS/Headers blocking
 
+// Background Music Logic
+function playBgMusic() {
+    const bgMusic = document.getElementById('bg-music');
+    if (bgMusic && bgMusic.paused) {
+        bgMusic.volume = 0.3; // Make it a pleasant background volume
+        bgMusic.play().catch(e => console.log('Audio play prevented', e));
+    }
+}
+
 // Handlers
 document.getElementById('btn-create-room').addEventListener('click', async () => {
+    playBgMusic(); // Attempt to play music on interaction
     const name = inputs.name.value.trim();
     const groupName = inputs.groupName.value.trim();
     if (!name) return showError('Name is required');
@@ -124,10 +134,47 @@ document.getElementById('btn-create-room').addEventListener('click', async () =>
 });
 
 document.getElementById('btn-join-room').addEventListener('click', () => {
+    playBgMusic(); // Attempt to play music on interaction
     const name = inputs.name.value.trim();
     const roomId = inputs.roomId.value.trim();
     if (!name || !roomId) return showError('Name and Room ID required');
     socket.emit('join_room', { name, roomId });
+});
+
+// Countdown Logic
+socket.on('show_countdown', () => {
+    const overlay = document.getElementById('countdown-overlay');
+    const numberEl = document.getElementById('countdown-number');
+    if (!overlay || !numberEl) return;
+    
+    // Reset and show
+    overlay.classList.remove('hidden');
+    let count = 3;
+    numberEl.textContent = count;
+    
+    // Play slightly louder for the start
+    const bgMusic = document.getElementById('bg-music');
+    if (bgMusic) bgMusic.volume = 0.6;
+    
+    const interval = setInterval(() => {
+        count--;
+        if (count > 0) {
+            numberEl.textContent = count;
+            // Force re-trigger animation
+            numberEl.style.animation = 'none';
+            numberEl.offsetHeight; /* trigger reflow */
+            numberEl.style.animation = null; 
+        } else if (count === 0) {
+            numberEl.textContent = 'GO!';
+            numberEl.style.animation = 'none';
+            numberEl.offsetHeight; 
+            numberEl.style.animation = null;
+        } else {
+            clearInterval(interval);
+            overlay.classList.add('hidden');
+            if (bgMusic) bgMusic.volume = 0.3; // Return to normal background level
+        }
+    }, 1000);
 });
 
 function showError(msg) {

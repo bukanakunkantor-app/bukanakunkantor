@@ -211,8 +211,19 @@ io.on('connection', (socket) => {
         const duration = 10 * 60 * 1000; // 10 minutes
 
         if (action === 'start_round1') {
-            room.round = 'round1';
-            room.timerEnd = Date.now() + duration;
+            // Emit countdown event immediately
+            io.to(roomId).emit('show_countdown');
+
+            // Delay actual round 1 start by 4 seconds to allow animation to complete
+            setTimeout(() => {
+                const currentRoom = rooms[roomId]; // Re-fetch in case room deleted
+                if (currentRoom) {
+                    currentRoom.round = 'round1';
+                    currentRoom.timerEnd = Date.now() + duration;
+                    io.to(roomId).emit('state_update', getPublicState(roomId));
+                }
+            }, 4000);
+            return; // Exit early so we don't emit state_update twice
         } else if (action === 'start_round2') {
             const counts = {};
             Object.values(room.votes.round1).forEach(dates => {

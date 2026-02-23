@@ -225,6 +225,18 @@
         </div>
     </div>
 
+    <!-- Background Music -->
+    <audio id="bg-music" loop>
+        <!-- Using a fun, upbeat royalty-free track from Pixabay -->
+        <source src="https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3" type="audio/mpeg">
+        Your browser does not support the audio element.
+    </audio>
+
+    <!-- Countdown Overlay -->
+    <div id="countdown-overlay" class="hidden">
+        <div id="countdown-number" class="countdown-pop">3</div>
+    </div>
+
     <!-- Required for Image Download -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="/socket.io/socket.io.js"></script>
