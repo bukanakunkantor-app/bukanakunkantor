@@ -146,16 +146,16 @@ socket.on('show_countdown', () => {
     const overlay = document.getElementById('countdown-overlay');
     const numberEl = document.getElementById('countdown-number');
     if (!overlay || !numberEl) return;
-    
+
     // Reset and show
     overlay.classList.remove('hidden');
     let count = 3;
     numberEl.textContent = count;
-    
+
     // Play slightly louder for the start
     const bgMusic = document.getElementById('bg-music');
     if (bgMusic) bgMusic.volume = 0.6;
-    
+
     const interval = setInterval(() => {
         count--;
         if (count > 0) {
@@ -163,11 +163,11 @@ socket.on('show_countdown', () => {
             // Force re-trigger animation
             numberEl.style.animation = 'none';
             numberEl.offsetHeight; /* trigger reflow */
-            numberEl.style.animation = null; 
+            numberEl.style.animation = null;
         } else if (count === 0) {
             numberEl.textContent = 'GO!';
             numberEl.style.animation = 'none';
-            numberEl.offsetHeight; 
+            numberEl.offsetHeight;
             numberEl.style.animation = null;
         } else {
             clearInterval(interval);
@@ -635,10 +635,10 @@ function escapeHTML(str) {
 let localRestos = [];
 function renderAdminRestoList(restaurants) {
     localRestos = JSON.parse(JSON.stringify(restaurants)); // Deep copy
-    refreshLocalRestoUI();
+    updateAdminRestoDOM(); // Update DOM without emitting back to server to prevent infinite loop
 }
 
-function refreshLocalRestoUI() {
+function updateAdminRestoDOM() {
     const list = document.getElementById('admin-resto-list');
     list.innerHTML = localRestos.map(r => `
         <li style="flex-wrap: wrap;">
@@ -649,7 +649,10 @@ function refreshLocalRestoUI() {
             <button class="btn-sm btn-outline" style="color: #ff4d4d; border-color: #ff4d4d; padding: 0.3rem 0.6rem;" onclick="deleteRestaurant('${r.id}')">Hapus</button>
         </li>
     `).join('');
+}
 
+function refreshLocalRestoUI() {
+    updateAdminRestoDOM();
     // Auto-save changes to server
     socket.emit('admin_update_restaurants', { roomId: currentRoomId, restaurants: localRestos });
 }
@@ -659,14 +662,16 @@ function addRestaurant() {
     const price = document.getElementById('new-resto-price').value.trim();
     const menu = document.getElementById('new-resto-menu').value.trim();
 
-    if (!name) return showError("Nama Resto wajid diisi");
+    if (!name) return showError("Nama Resto wajib diisi");
 
-    localRestos.push({
+    localRestos.unshift({
         id: 'r_custom_' + Date.now(),
         name,
         price_range: price || '-',
         menu_highlights: menu || '-'
     });
+
+    localRestos = localRestos.slice(0, 6); // Keep only top 6
 
     document.getElementById('new-resto-name').value = '';
     document.getElementById('new-resto-price').value = '';
